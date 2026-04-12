@@ -1,0 +1,1420 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eventrix — Event Management</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="h.ttps://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #030a12;
+    --surface: #0b1520;
+    --surface2: #111e2e;
+    --border: rgba(255,255,255,0.07);
+    --border-accent: rgba(34,211,238,0.3);
+    --cyan: #22d3ee;
+    --cyan-dim: rgba(34,211,238,0.12);
+    --cyan-glow: rgba(34,211,238,0.25);
+    --text: #f0f4f8;
+    --muted: #647d93;
+    --danger: #f87171;
+    --danger-dim: rgba(248,113,113,0.12);
+    --success: #34d399;
+    --success-dim: rgba(52,211,153,0.12);
+    --amber: #fbbf24;
+    --amber-dim: rgba(251,191,36,0.12);
+    --radius: 12px;
+    --radius-sm: 8px;
+    --font-display: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --nav-h: 64px;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCROLLBAR ── */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── GRID TEXTURE ── */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(34,211,238,0.025) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(34,211,238,0.025) 1px, transparent 1px);
+    background-size: 48px 48px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ── PAGES ── */
+  .page {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(8px);
+    transition: opacity 0.4s ease, transform 0.4s ease;
+    z-index: 10;
+    overflow-y: auto;
+  }
+  .page.active {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateY(0);
+  }
+
+  /* ── LOGIN PAGE ── */
+  #loginPage {
+    justify-content: center;
+    align-items: center;
+    background: var(--bg);
+  }
+
+  .login-box {
+    width: 100%;
+    max-width: 400px;
+    padding: 0 24px;
+    animation: fadeUp 0.6s ease forwards;
+  }
+
+  .login-logo {
+    font-family: var(--font-display);
+    font-size: 32px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text);
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .login-logo span {
+    color: var(--cyan);
+  }
+
+  .login-tagline {
+    color: var(--muted);
+    font-size: 14px;
+    font-weight: 300;
+    margin-bottom: 40px;
+    letter-spacing: 0.5px;
+  }
+
+  .login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+  }
+
+  .login-card h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+
+  .login-card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 28px;
+  }
+
+  .role-tabs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+
+  .role-tab {
+    padding: 10px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    font-family: var(--font-body);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+  }
+
+  .role-tab.selected, .role-tab:hover {
+    border-color: var(--cyan);
+    color: var(--cyan);
+    background: var(--cyan-dim);
+  }
+
+  .field-label {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  input[type="text"], input[type="email"], input[type="date"],
+  input[type="password"], input[type="datetime-local"], textarea, select {
+    width: 100%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    padding: 11px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--cyan);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--muted);
+    font-weight: 300;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.4);
+    cursor: pointer;
+  }
+
+  textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+  .field-group { margin-bottom: 18px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 11px 20px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-body);
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .btn-primary {
+    background: var(--cyan);
+    color: #030a12;
+    width: 100%;
+  }
+  .btn-primary:hover { background: #67e8f9; }
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-dim); }
+
+  .btn-danger {
+    background: var(--danger-dim);
+    color: var(--danger);
+    border: 1px solid transparent;
+  }
+  .btn-danger:hover { border-color: var(--danger); }
+
+  .btn-edit {
+    background: var(--amber-dim);
+    color: var(--amber);
+    border: 1px solid transparent;
+  }
+  .btn-edit:hover { border-color: var(--amber); }
+
+  .btn-sm {
+    padding: 7px 14px;
+    font-size: 12px;
+    border-radius: 6px;
+  }
+
+  /* ── NAVBAR ── */
+  .navbar {
+    height: var(--nav-h);
+    background: rgba(3,10,18,0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 28px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    flex-shrink: 0;
+  }
+
+  .nav-brand {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+  .nav-brand span { color: var(--cyan); }
+
+  .nav-right { display: flex; align-items: center; gap: 12px; }
+
+  .nav-badge {
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    background: var(--surface);
+    font-weight: 400;
+  }
+
+  .view-toggle {
+    display: flex;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+  }
+  .toggle-btn {
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    background: transparent;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+  }
+  .toggle-btn.on { background: var(--cyan-dim); color: var(--cyan); }
+
+  /* ── CONTENT ── */
+  .content {
+    flex: 1;
+    padding: 32px 28px;
+    max-width: 1200px;
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 14px;
+    margin-bottom: 32px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px 22px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--muted);
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .stat-value {
+    font-family: var(--font-display);
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.cyan { color: var(--cyan); }
+  .stat-value.success { color: var(--success); }
+  .stat-value.amber { color: var(--amber); }
+
+  /* ── SECTION HEADER ── */
+  .section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .section-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.2px;
+  }
+
+  /* ── FORM CARD ── */
+  .form-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    margin-bottom: 32px;
+  }
+
+  .form-card h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 22px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .form-card h3::before {
+    content: '';
+    display: block;
+    width: 3px;
+    height: 16px;
+    background: var(--cyan);
+    border-radius: 2px;
+  }
+
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-grid .span-2 { grid-column: span 2; }
+
+  @media (max-width: 640px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .form-grid .span-2 { grid-column: span 1; }
+  }
+
+  /* ── EVENTS GRID ── */
+  .events-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  /* ── EVENT CARD ── */
+  .event-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    transition: border-color 0.2s, transform 0.2s;
+    animation: fadeUp 0.35s ease forwards;
+    opacity: 0;
+  }
+
+  .event-card:hover {
+    border-color: var(--border-accent);
+    transform: translateY(-2px);
+  }
+
+  .event-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  .event-name {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    line-height: 1.3;
+    flex: 1;
+  }
+
+  .event-badge {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 4px 9px;
+    border-radius: 20px;
+    flex-shrink: 0;
+  }
+
+  .badge-upcoming { background: var(--cyan-dim); color: var(--cyan); }
+  .badge-past { background: rgba(100,125,147,0.15); color: var(--muted); }
+
+  .event-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    font-weight: 300;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .event-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .meta-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .meta-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    opacity: 0.6;
+  }
+
+  .event-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .event-actions .btn { flex: 1; }
+
+  /* ── REGISTER FORM ── */
+  .reg-form {
+    border-top: 1px solid var(--border);
+    padding-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .reg-form input {
+    font-size: 13px;
+    padding: 9px 12px;
+  }
+
+  /* ── SEARCH/FILTER BAR ── */
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+
+  .search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 200px;
+  }
+
+  .search-wrap svg {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted);
+    pointer-events: none;
+  }
+
+  .search-wrap input {
+    padding-left: 38px;
+  }
+
+  .filter-pills {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .pill {
+    padding: 9px 16px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: var(--font-body);
+  }
+
+  .pill.active { border-color: var(--cyan); color: var(--cyan); background: var(--cyan-dim); }
+  .pill:hover:not(.active) { border-color: rgba(255,255,255,0.15); color: var(--text); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 28px 0;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--muted);
+    grid-column: 1/-1;
+  }
+
+  .empty-icon {
+    font-size: 32px;
+    margin-bottom: 12px;
+    opacity: 0.4;
+  }
+
+  .empty h3 {
+    font-family: var(--font-display);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 6px;
+    opacity: 0.6;
+  }
+
+  .empty p { font-size: 13px; font-weight: 300; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px 22px;
+    font-size: 13px;
+    color: var(--text);
+    z-index: 9999;
+    opacity: 0;
+    transition: all 0.3s;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  #toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+  #toast .dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--cyan);
+    flex-shrink: 0;
+  }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(3,10,18,0.85);
+    z-index: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px;
+    width: 100%;
+    max-width: 520px;
+    transform: scale(0.96);
+    transition: transform 0.25s;
+  }
+  .modal-overlay.open .modal { transform: scale(1); }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+  }
+  .modal-header h3 {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .modal-header h3::before {
+    content: '';
+    display: block;
+    width: 3px; height: 16px;
+    background: var(--amber);
+    border-radius: 2px;
+  }
+
+  .modal-close {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 30px; height: 30px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .modal-close:hover { border-color: var(--danger); color: var(--danger); }
+
+  /* ── ERROR ── */
+  .field-error {
+    font-size: 11px;
+    color: var(--danger);
+    margin-top: 5px;
+    display: none;
+  }
+  .field-error.show { display: block; }
+  input.invalid, textarea.invalid { border-color: var(--danger); }
+
+  /* ── REG CONFIRM ── */
+  .reg-success {
+    background: var(--success-dim);
+    border: 1px solid rgba(52,211,153,0.25);
+    border-radius: var(--radius-sm);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--success);
+    text-align: center;
+    display: none;
+  }
+
+  /* ── ANIMATIONS ── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 600px) {
+    .content { padding: 20px 16px; }
+    .navbar  { padding: 0 16px; }
+    .stats-row { grid-template-columns: 1fr 1fr; }
+    .filter-pills { width: 100%; }
+    .pill { flex: 1; text-align: center; }
+  }
+
+  /* ── TABLE (admin list view) ── */
+  .admin-table-wrap {
+    overflow-x: auto;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+
+  thead th {
+    background: var(--surface2);
+    font-size: 11px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: var(--muted);
+    padding: 12px 16px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--surface2); }
+
+  tbody td {
+    padding: 12px 16px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  tbody td.muted { color: var(--muted); font-weight: 300; }
+
+  .td-actions { display: flex; gap: 8px; }
+
+  /* VIEW SWITCHER (admin) */
+  .admin-view-toggle { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<!-- ─── LOGIN PAGE ─── -->
+<div class="page active" id="loginPage">
+  <div class="login-box">
+    <div class="login-logo">Eventrix<span>.</span></div>
+    <p class="login-tagline">Seamless event management for teams and audiences.</p>
+
+    <div class="login-card">
+      <h2>Sign in to continue</h2>
+      <p>Choose your access level below</p>
+
+      <div class="role-tabs">
+        <button class="role-tab selected" id="tabAdmin" onclick="selectRole('admin')">Admin</button>
+        <button class="role-tab" id="tabUser" onclick="selectRole('user')">Public User</button>
+      </div>
+
+      <div id="adminFields">
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <input type="password" id="adminPwd" placeholder="Enter admin password" onkeydown="if(event.key==='Enter')doLogin()">
+          <div class="field-error" id="pwdError">Incorrect password. Try "admin123".</div>
+        </div>
+      </div>
+
+      <button class="btn btn-primary" onclick="doLogin()">Continue →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ─── ADMIN PAGE ─── -->
+<div class="page" id="adminPage">
+  <nav class="navbar">
+    <div class="nav-brand">Eventrix<span>.</span></div>
+    <div class="nav-right">
+      <span class="nav-badge">Admin</span>
+      <div class="view-toggle">
+        <button class="toggle-btn on" id="adminViewCard" onclick="setAdminView('card')">Cards</button>
+        <button class="toggle-btn" id="adminViewTable" onclick="setAdminView('table')">Table</button>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="switchToPublic()">Public View</button>
+      <button class="btn btn-danger btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="content">
+    <!-- STATS -->
+    <div class="stats-row" id="statsRow">
+      <div class="stat-card">
+        <div class="stat-label">Total Events</div>
+        <div class="stat-value cyan" id="statTotal">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Upcoming</div>
+        <div class="stat-value success" id="statUpcoming">0</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Past</div>
+        <div class="stat-value" id="statPast">0</div>
+      </div>
+    </div>
+
+    <!-- CREATE FORM -->
+    <div class="form-card">
+      <h3>Create New Event</h3>
+      <form id="eventForm" novalidate>
+        <div class="form-grid">
+          <div class="field-group">
+            <label class="field-label">Event Name *</label>
+            <input type="text" id="f_name" placeholder="e.g. Design Summit 2025">
+            <div class="field-error" id="e_name">Event name is required.</div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Venue *</label>
+            <input type="text" id="f_venue" placeholder="e.g. The Ritz Auditorium">
+            <div class="field-error" id="e_venue">Venue is required.</div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Date & Time *</label>
+            <input type="datetime-local" id="f_date">
+            <div class="field-error" id="e_date">A future date and time is required.</div>
+          </div>
+          <div class="field-group">
+            <label class="field-label">Category</label>
+            <select id="f_cat">
+              <option value="Conference">Conference</option>
+              <option value="Workshop">Workshop</option>
+              <option value="Networking">Networking</option>
+              <option value="Exhibition">Exhibition</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+          <div class="field-group span-2">
+            <label class="field-label">Description *</label>
+            <textarea id="f_desc" placeholder="Describe the event — agenda, speakers, highlights…"></textarea>
+            <div class="field-error" id="e_desc">Description is required.</div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary" style="max-width:200px">Create Event →</button>
+      </form>
+    </div>
+
+    <hr class="divider">
+
+    <!-- EVENT LIST -->
+    <div class="section-header">
+      <div class="section-title">All Events</div>
+    </div>
+
+    <div id="adminCardView">
+      <div class="events-grid" id="adminGrid"></div>
+    </div>
+
+    <div id="adminTableView" style="display:none">
+      <div class="admin-table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Date</th>
+              <th>Venue</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="adminTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─── PUBLIC PAGE ─── -->
+<div class="page" id="publicPage">
+  <nav class="navbar">
+    <div class="nav-brand">Eventrix<span>.</span></div>
+    <div class="nav-right">
+      <span class="nav-badge">Public</span>
+      <button class="btn btn-ghost btn-sm" onclick="switchToAdmin()">Admin Panel</button>
+      <button class="btn btn-danger btn-sm" onclick="doLogout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="content">
+    <div class="section-header" style="margin-bottom:24px">
+      <div>
+        <div class="section-title" style="font-size:22px; margin-bottom:4px;">Explore Events</div>
+        <div style="font-size:13px; color:var(--muted); font-weight:300;">Discover and register for upcoming events</div>
+      </div>
+    </div>
+
+    <div class="filter-bar">
+      <div class="search-wrap">
+        <svg class="meta-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input type="text" id="searchInput" placeholder="Search events by name or keyword…" oninput="renderPublic()">
+      </div>
+      <div class="filter-pills">
+        <button class="pill active" id="pillAll" onclick="setFilter('all')">All</button>
+        <button class="pill" id="pillUpcoming" onclick="setFilter('upcoming')">Upcoming</button>
+        <button class="pill" id="pillPast" onclick="setFilter('past')">Past</button>
+      </div>
+    </div>
+
+    <div class="events-grid" id="publicGrid"></div>
+  </div>
+</div>
+
+<!-- ─── EDIT MODAL ─── -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal">
+    <div class="modal-header">
+      <h3>Edit Event</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-grid">
+      <div class="field-group">
+        <label class="field-label">Event Name *</label>
+        <input type="text" id="m_name">
+        <div class="field-error" id="me_name">Required.</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Venue *</label>
+        <input type="text" id="m_venue">
+        <div class="field-error" id="me_venue">Required.</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Date & Time *</label>
+        <input type="datetime-local" id="m_date">
+        <div class="field-error" id="me_date">Required.</div>
+      </div>
+      <div class="field-group">
+        <label class="field-label">Category</label>
+        <select id="m_cat">
+          <option value="Conference">Conference</option>
+          <option value="Workshop">Workshop</option>
+          <option value="Networking">Networking</option>
+          <option value="Exhibition">Exhibition</option>
+          <option value="Other">Other</option>
+        </select>
+      </div>
+      <div class="field-group span-2">
+        <label class="field-label">Description *</label>
+        <textarea id="m_desc"></textarea>
+        <div class="field-error" id="me_desc">Required.</div>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px; margin-top:8px">
+      <button class="btn btn-ghost" style="flex:1" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:2" onclick="saveEdit()">Save Changes →</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"><span class="dot"></span><span id="toastMsg">Done</span></div>
+
+<script>
+// ─── STATE ───
+const ADMIN_PASS = 'admin123';
+let events = [];
+let editingId = null;
+let currentRole = 'admin';
+let publicFilter = 'all';
+let adminViewMode = 'card';
+
+// ─── HELPERS ───
+function $(id){ return document.getElementById(id); }
+
+function now(){ return new Date(); }
+
+function fmtDate(dt){
+  if(!dt) return '—';
+  const d = new Date(dt);
+  return d.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'}) +
+    ' · ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+}
+
+function isUpcoming(dt){ return new Date(dt) > now(); }
+
+function uid(){ return Date.now() + Math.random().toString(36).slice(2); }
+
+function showToast(msg){
+  $('toastMsg').textContent = msg;
+  const t = $('toast');
+  t.classList.add('show');
+  setTimeout(()=> t.classList.remove('show'), 2500);
+}
+
+function showPage(id){
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+function setMinDate(){
+  const now = new Date();
+  const pad = n => String(n).padStart(2,'0');
+  const min = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  $('f_date').min = min;
+}
+
+// ─── LOGIN ───
+let selectedRole = 'admin';
+
+function selectRole(r){
+  selectedRole = r;
+  $('tabAdmin').classList.toggle('selected', r==='admin');
+  $('tabUser').classList.toggle('selected', r==='user');
+  $('adminFields').style.display = r==='admin' ? 'block' : 'none';
+}
+
+function doLogin(){
+  if(selectedRole === 'admin'){
+    const pwd = $('adminPwd').value;
+    if(pwd !== ADMIN_PASS){
+      $('pwdError').classList.add('show');
+      $('adminPwd').classList.add('invalid');
+      return;
+    }
+    $('pwdError').classList.remove('show');
+    $('adminPwd').classList.remove('invalid');
+    $('adminPwd').value = '';
+    currentRole = 'admin';
+    setMinDate();
+    renderAdmin();
+    showPage('adminPage');
+  } else {
+    currentRole = 'user';
+    renderPublic();
+    showPage('publicPage');
+  }
+}
+
+function doLogout(){
+  showPage('loginPage');
+  selectedRole = 'admin';
+  selectRole('admin');
+}
+
+function switchToPublic(){
+  renderPublic();
+  showPage('publicPage');
+}
+
+function switchToAdmin(){
+  if(currentRole !== 'admin'){
+    doLogout();
+    return;
+  }
+  renderAdmin();
+  showPage('adminPage');
+}
+
+// ─── VALIDATION ───
+function validateCreate(){
+  let ok = true;
+  const fields = [
+    {id:'f_name', err:'e_name'},
+    {id:'f_venue', err:'e_venue'},
+    {id:'f_desc', err:'e_desc'},
+  ];
+  fields.forEach(f=>{
+    const el = $(f.id);
+    if(!el.value.trim()){
+      el.classList.add('invalid');
+      $(f.err).classList.add('show');
+      ok = false;
+    } else {
+      el.classList.remove('invalid');
+      $(f.err).classList.remove('show');
+    }
+  });
+
+  const dt = $('f_date').value;
+  if(!dt || new Date(dt) <= now()){
+    $('f_date').classList.add('invalid');
+    $('e_date').classList.add('show');
+    ok = false;
+  } else {
+    $('f_date').classList.remove('invalid');
+    $('e_date').classList.remove('show');
+  }
+
+  return ok;
+}
+
+// ─── CREATE ───
+$('eventForm').addEventListener('submit', e => {
+  e.preventDefault();
+  if(!validateCreate()) return;
+
+  const ev = {
+    id: uid(),
+    name: $('f_name').value.trim(),
+    venue: $('f_venue').value.trim(),
+    date: $('f_date').value,
+    desc: $('f_desc').value.trim(),
+    cat: $('f_cat').value,
+    registrations: []
+  };
+
+  events.unshift(ev);
+  $('eventForm').reset();
+  setMinDate();
+  renderAll();
+  showToast('Event created successfully');
+});
+
+// ─── DELETE ───
+function deleteEvent(id){
+  events = events.filter(e => e.id !== id);
+  renderAll();
+  showToast('Event deleted');
+}
+
+// ─── EDIT ───
+function openEdit(id){
+  const ev = events.find(e => e.id === id);
+  if(!ev) return;
+  editingId = id;
+  $('m_name').value = ev.name;
+  $('m_venue').value = ev.venue;
+  $('m_date').value = ev.date;
+  $('m_desc').value = ev.desc;
+  $('m_cat').value = ev.cat;
+  $('editModal').classList.add('open');
+}
+
+function closeModal(){
+  $('editModal').classList.remove('open');
+  editingId = null;
+  ['m_name','m_venue','m_date','m_desc'].forEach(id=>{
+    $(id).classList.remove('invalid');
+  });
+  ['me_name','me_venue','me_date','me_desc'].forEach(id=>{
+    $(id).classList.remove('show');
+  });
+}
+
+function saveEdit(){
+  let ok = true;
+  const fields = [
+    {id:'m_name', err:'me_name'},
+    {id:'m_venue', err:'me_venue'},
+    {id:'m_desc', err:'me_desc'},
+  ];
+  fields.forEach(f=>{
+    const el = $(f.id);
+    if(!el.value.trim()){
+      el.classList.add('invalid');
+      $(f.err).classList.add('show');
+      ok = false;
+    } else {
+      el.classList.remove('invalid');
+      $(f.err).classList.remove('show');
+    }
+  });
+  if(!$('m_date').value){
+    $('m_date').classList.add('invalid');
+    $('me_date').classList.add('show');
+    ok = false;
+  } else {
+    $('m_date').classList.remove('invalid');
+    $('me_date').classList.remove('show');
+  }
+  if(!ok) return;
+
+  const ev = events.find(e => e.id === editingId);
+  if(ev){
+    ev.name = $('m_name').value.trim();
+    ev.venue = $('m_venue').value.trim();
+    ev.date = $('m_date').value;
+    ev.desc = $('m_desc').value.trim();
+    ev.cat = $('m_cat').value;
+  }
+  closeModal();
+  renderAll();
+  showToast('Event updated');
+}
+
+// ─── REGISTER ───
+function register(id, nameId, emailId, btnId, successId){
+  const name = $(nameId).value.trim();
+  const email = $(emailId).value.trim();
+  if(!name || !email || !email.includes('@')){
+    showToast('Please enter a valid name and email.');
+    return;
+  }
+  const ev = events.find(e => e.id === id);
+  if(ev){
+    ev.registrations = ev.registrations || [];
+    ev.registrations.push({name, email, time: new Date().toISOString()});
+  }
+  $(successId).style.display = 'block';
+  $(btnId).disabled = true;
+  $(btnId).textContent = 'Registered ✓';
+  $(nameId).value = '';
+  $(emailId).value = '';
+  showToast(`Registered: ${name}`);
+}
+
+// ─── RENDER ───
+function renderAll(){
+  renderAdmin();
+  renderPublic();
+}
+
+function renderStats(){
+  const up = events.filter(e => isUpcoming(e.date)).length;
+  $('statTotal').textContent = events.length;
+  $('statUpcoming').textContent = up;
+  $('statPast').textContent = events.length - up;
+}
+
+function badgeHTML(dt){
+  return isUpcoming(dt)
+    ? '<span class="event-badge badge-upcoming">Upcoming</span>'
+    : '<span class="event-badge badge-past">Past</span>';
+}
+
+function svgCalendar(){
+  return `<svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>`;
+}
+
+function svgPin(){
+  return `<svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>`;
+}
+
+function svgTag(){
+  return `<svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>`;
+}
+
+function eventCardHTML(ev, isAdmin){
+  const regId = 'reg_'+ev.id;
+  const nId = 'n_'+ev.id;
+  const eId = 'e_'+ev.id;
+  const bId = 'b_'+ev.id;
+  const sId = 's_'+ev.id;
+  const upcoming = isUpcoming(ev.date);
+
+  const adminActions = isAdmin ? `
+    <div class="event-actions">
+      <button class="btn btn-edit btn-sm" onclick="openEdit('${ev.id}')">Edit</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteEvent('${ev.id}')">Delete</button>
+    </div>` : '';
+
+  const publicReg = !isAdmin ? `
+    <div class="reg-form" id="${regId}">
+      <input type="text" id="${nId}" placeholder="Your name">
+      <input type="email" id="${eId}" placeholder="Your email">
+      <button class="btn btn-primary btn-sm" id="${bId}" onclick="register('${ev.id}','${nId}','${eId}','${bId}','${sId}')">Register →</button>
+      <div class="reg-success" id="${sId}">You're registered! See you there.</div>
+    </div>` : '';
+
+  const regCount = isAdmin && ev.registrations && ev.registrations.length > 0
+    ? `<div class="meta-row" style="color:var(--success)">
+        <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        ${ev.registrations.length} registration${ev.registrations.length > 1 ? 's' : ''}
+       </div>` : '';
+
+  return `
+    <div class="event-card">
+      <div class="event-card-top">
+        <div class="event-name">${ev.name}</div>
+        ${badgeHTML(ev.date)}
+      </div>
+      <p class="event-desc">${ev.desc}</p>
+      <div class="event-meta">
+        <div class="meta-row">${svgCalendar()} ${fmtDate(ev.date)}</div>
+        <div class="meta-row">${svgPin()} ${ev.venue}</div>
+        <div class="meta-row">${svgTag()} ${ev.cat}</div>
+        ${regCount}
+      </div>
+      ${adminActions}
+      ${!upcoming && !isAdmin ? '<div style="font-size:12px;color:var(--muted);padding-top:8px;border-top:1px solid var(--border)">This event has ended.</div>' : publicReg}
+    </div>`;
+}
+
+function renderAdmin(){
+  renderStats();
+  const grid = $('adminGrid');
+  const body = $('adminTableBody');
+
+  if(events.length === 0){
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">◦</div><h3>No events yet</h3><p>Create your first event using the form above.</p></div>`;
+    body.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--muted)">No events yet</td></tr>`;
+    return;
+  }
+
+  grid.innerHTML = events.map(e => eventCardHTML(e, true)).join('');
+  body.innerHTML = events.map(e => `
+    <tr>
+      <td style="font-weight:500">${e.name}</td>
+      <td class="muted">${fmtDate(e.date)}</td>
+      <td class="muted">${e.venue}</td>
+      <td class="muted">${e.cat}</td>
+      <td>${badgeHTML(e.date)}</td>
+      <td><div class="td-actions">
+        <button class="btn btn-edit btn-sm" onclick="openEdit('${e.id}')">Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEvent('${e.id}')">Delete</button>
+      </div></td>
+    </tr>`).join('');
+}
+
+function setFilter(f){
+  publicFilter = f;
+  ['All','Upcoming','Past'].forEach(name => {
+    const pill = $('pill' + name);
+    pill.classList.toggle('active', f === name.toLowerCase() || (f==='all' && name==='All'));
+  });
+  renderPublic();
+}
+
+function renderPublic(){
+  const q = ($('searchInput') ? $('searchInput').value : '').toLowerCase().trim();
+  let list = [...events];
+
+  if(publicFilter === 'upcoming') list = list.filter(e => isUpcoming(e.date));
+  else if(publicFilter === 'past')     list = list.filter(e => !isUpcoming(e.date));
+
+  if(q) list = list.filter(e =>
+    e.name.toLowerCase().includes(q) ||
+    e.desc.toLowerCase().includes(q) ||
+    e.venue.toLowerCase().includes(q) ||
+    e.cat.toLowerCase().includes(q)
+  );
+
+  const grid = $('publicGrid');
+  if(list.length === 0){
+    grid.innerHTML = `<div class="empty"><div class="empty-icon">◦</div><h3>No events found</h3><p>${q ? 'Try a different search term.' : 'Check back soon for upcoming events.'}</p></div>`;
+    return;
+  }
+
+  grid.innerHTML = list.map(e => eventCardHTML(e, false)).join('');
+}
+
+function setAdminView(v){
+  adminViewMode = v;
+  $('adminCardView').style.display = v === 'card' ? 'block' : 'none';
+  $('adminTableView').style.display = v === 'table' ? 'block' : 'none';
+  $('adminViewCard').classList.toggle('on', v === 'card');
+  $('adminViewTable').classList.toggle('on', v === 'table');
+}
+
+// ─── SEED DATA (demo) ───
+function seedData(){
+  const base = new Date();
+  const future = (d) => {
+    const dt = new Date(base);
+    dt.setDate(dt.getDate() + d);
+    return dt.toISOString().slice(0,16);
+  };
+  const past = (d) => {
+    const dt = new Date(base);
+    dt.setDate(dt.getDate() - d);
+    return dt.toISOString().slice(0,16);
+  };
+
+  events = [
+    { id: uid(), name: 'Design Systems Summit', venue: 'Taj MG Road, Bengaluru', date: future(12), desc: 'A deep dive into building scalable design systems with tokens, components, and documentation workflows.', cat: 'Conference', registrations: [{name:'Riya Sharma',email:'riya@test.com'}] },
+    { id: uid(), name: 'AI & Product Workshop', venue: 'WeWork Galaxy, Residency Rd', date: future(25), desc: 'Hands-on workshop exploring how product teams can integrate AI into their development and research processes.', cat: 'Workshop', registrations: [] },
+    { id: uid(), name: 'Startup Networking Night', venue: 'The Lalit Ashok', date: future(5), desc: 'Connect with founders, investors, and operators in Bengaluru\'s thriving startup ecosystem. Open to all.', cat: 'Networking', registrations: [] },
+    { id: uid(), name: 'Creative Tech Exhibition', venue: 'Bangalore Palace Grounds', date: past(8), desc: 'An exploration of the intersection between technology, interactive media, and contemporary art installations.', cat: 'Exhibition', registrations: [{name:'Arjun Mehta',email:'arjun@test.com'},{name:'Priya V',email:'priya@test.com'}] },
+    { id: uid(), name: 'Frontend Craft Conference', venue: 'NIMHANS Convention Centre', date: past(30), desc: 'Two days of deep talks on performance, animation, accessibility, and the future of web interfaces.', cat: 'Conference', registrations: [] },
+  ];
+}
+
+// ─── INIT ───
+seedData();
+setMinDate();
+selectRole('admin');
+</script>
+</body>
+</html>
